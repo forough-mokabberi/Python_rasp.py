@@ -189,7 +189,6 @@ def First_communication():
                                print('SEND ACK')
                                print('write XML')
                                print ('END First XML')
-                               break
                            else:
                                conn.send(('NACK').encode())
                                f = open('error_log.txt', 'w')
@@ -225,6 +224,9 @@ def First_communication():
                       f.write("FIRST COMMUNICATION = Does not Received Size")  # write it to a file called tag_data.xml
                       f.close()
                       os.system("sudo reboot")
+
+
+
 
              # receive the size of STATUS XML file
              ready = select.select([conn], [], [], 5)
@@ -1175,13 +1177,13 @@ def Status_function():
                 print(data_received)
                 print('New XML RECEIVED')
         #            time.sleep(0.2)
-                f = open('Status.xml', 'w')
+                f = open('status.xml', 'w')
                 f.write(data_received.decode())  # write it to a file called tag_dat
                 f.close()
                 print('Write new XML')
 
                 prev = 0
-                for eachline in open('Status.xml', 'rb'):
+                for eachline in open('status.xml', 'rb'):
                     prev = zlib.crc32(eachline, prev)
                 print("CRC")
                 print((hex(prev)))
@@ -1323,9 +1325,9 @@ def Serial():
        tree = etree.parse('machine.xml')
        root = tree.getroot()
        print('machine.xml.parse')
-       tree_status_xml = etree.parse('Status.xml')
+       tree_status_xml = etree.parse('status.xml')
        root_status_xml = tree_status_xml.getroot()
-       print('Status.xml.parse')
+       print('status.xml.parse')
 
        print('Test Serial')
 
@@ -1441,15 +1443,16 @@ def Serial():
 
                        if( (len(Serial_data)> 8)):
                            if((ID_num == ID_num2)):
-
+                               print('ID ok')
                                value1 = Serial_data[0] + Serial_data[1] + Serial_data[2] + Serial_data[3] + Serial_data[4] + \
-                                    Serial_data[5] + Serial_data[6] + Serial_data[7]
+                               Serial_data[5] + Serial_data[6] + Serial_data[7]
                                value2 = bytearray()
                                value2[0:2] = ((value1).to_bytes(2, byteorder="big"))
                                checksum = 0xFF - value2[1]
-
+                               print('checksum:')
+                               print(str(checksum))
                                if (checksum) == Serial_data[8]:
-
+                                  print('checksum ok')
                                   ID_num = int.from_bytes(Serial_data[0:2], byteorder="big")
                                   Status_num = int.from_bytes(Serial_data[2:3], byteorder="big")
                                   Operator_num = int.from_bytes(Serial_data[3:5], byteorder="big")
@@ -1479,11 +1482,14 @@ def Serial():
 
                                       if not(root[itr][2].text == 'Zero production'):
                                         root[itr][8].text = str(Production_num)
-                                    #load status name in machine xml
+                                      #load status name in machine xml
                                       for Status_itr in range(len(root_status_xml)):
-                                          if(root_status_xml[Status_itr][1] == str(Status_num)):
+                                          print('status:')
+                                          print(len(root_status_xml))
+                                          if(root_status_xml[Status_itr][1].text == str(Status_num)):
                                               root[itr][2].text = root_status_xml[Status_itr][0].text
-
+                                              print('Status: ')
+                                              print(root[itr][2].text)
 
                                       root[itr][10].text = str(Operator_num)
 
