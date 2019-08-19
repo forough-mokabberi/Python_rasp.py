@@ -148,8 +148,9 @@ def First_communication():
 
              time.sleep(1)
 
-             ready = select.select([conn], [], [], 5)
              # receive the size of XML file
+             ready = select.select([conn], [], [], 5)
+
              if ready[0]:
 
                 size_xml = conn.recv(6)
@@ -187,11 +188,6 @@ def First_communication():
                                conn.send(data.encode())
                                print('SEND ACK')
                                print('write XML')
-                               Current_Status_Flag = 1
-                               print(Current_Status_Flag)
-                               DATA_Ready = 'Deactivate'
-                               List_Flag = 1
-                               #Receive_Flag = 1
                                print ('END First XML')
                                break
                            else:
@@ -229,6 +225,94 @@ def First_communication():
                       f.write("FIRST COMMUNICATION = Does not Received Size")  # write it to a file called tag_data.xml
                       f.close()
                       os.system("sudo reboot")
+
+             # receive the size of STATUS XML file
+             ready = select.select([conn], [], [], 5)
+
+             if ready[0]:
+
+                 size_xml = conn.recv(6)
+
+                 time.sleep(.2)
+
+                 try:
+                     size = int(size_xml)
+                     conn.send(('ACK').encode())
+                     time.sleep(1)
+                     ready = select.select([conn], [], [], 10)
+                     print("wait for SATATUS XML")
+                     if ready[0]:
+                         data_received = conn.recv(size)
+                         conn.send(('ACK').encode())
+                         print('RECEVIED STATUS XML')
+                         print(data_received)
+                         f = open('status.xml', 'w')
+                         f.write((data_received).decode())  # write it to a file called tag_data.xml
+                         f.close()
+                         prev = 0
+                         for eachline in open('status.xml', 'rb'):
+                             prev = zlib.crc32(eachline, prev)
+                         print("STATUS CRC")
+                         print((hex(prev)))
+
+                         ready = select.select([conn], [], [], 5)
+                         print("wait for STATUS CRC32")
+                         if ready[0]:
+                             data_received_crc = conn.recv(10)
+                             print(data_received_crc)
+                             if ((data_received_crc).decode() == str(hex(prev))):
+                                 time.sleep(.2)
+                                 data = 'ACK'
+                                 conn.send(data.encode())
+                                 print('SEND ACK')
+                                 print('write STATUS XML')
+                                 Current_Status_Flag = 1
+                                 print(Current_Status_Flag)
+                                 DATA_Ready = 'Deactivate'
+                                 List_Flag = 1
+                                 # Receive_Flag = 1
+                                 print ('END STATUS XML')
+                                 break
+                             else:
+                                 conn.send(('NACK').encode())
+                                 f = open('error_log.txt', 'w')
+                                 f.write(
+                                     "FIRST COMMUNICATION = Does not Received Correct STATUS CRC32")  # write it to a file called tag_data.xml
+                                 f.close()
+                                 os.system("sudo reboot")
+                         else:
+                             conn.send(('NACK').encode())
+                             f = open('error_log.txt', 'w')
+                             f.write(
+                                 "FIRST COMMUNICATION = Does not Received STATUS CRC32")  # write it to a file called tag_data.xml
+                             f.close()
+                             os.system("sudo reboot")
+                     else:
+                         conn.send(('NACK').encode())
+                         f = open('error_log.txt', 'w')
+                         f.write(
+                             "FIRST COMMUNICATION = Does not Received STATUS XML")  # write it to a file called tag_data.xml
+                         f.close()
+                         os.system("sudo reboot")
+                 except:
+                     conn.send(('NACK').encode())
+                     # pass  1
+                     f = open('error_log.txt', 'w')
+                     f.write(
+                         "FIRST COMMUNICATION = Does not Received correct STATUS XML Size")  # write it to a file called tag_data.xml
+                     f.close()
+                     os.system("sudo reboot")
+
+             else:
+                 # pass    2
+                 ERROR_FIRST_COMMUNICATION_COUNTER = ERROR_FIRST_COMMUNICATION_COUNTER + 1
+                 print ("ERROR +++++++++")
+                 if ERROR_FIRST_COMMUNICATION_COUNTER == 3:
+                     f = open('error_log.txt', 'w')
+                     f.write(
+                         "FIRST COMMUNICATION = Does not Received STATUS XML Size")  # write it to a file called tag_data.xml
+                     f.close()
+                     os.system("sudo reboot")
         else:
              #pass  3
              f = open('error_log.txt', 'w')
@@ -305,6 +389,11 @@ def Receive_data():
                Serial_Flag2 = 0
                Receive_Flag = 0
                Zero_Production_function()
+
+            elif data_received == b'Status':
+                WDG_REFLESH = 0
+                Serial_Flag2 = 0
+                Status_function()
 
         except:
             pass
@@ -1044,6 +1133,128 @@ def Zero_Production_function():
        DATA_Ready = 'Deactivate'
    return
 
+
+# ****************************************************
+# #*****************  Status ****************
+# #****************************************************
+def Status_function():
+
+      global Status_Flag
+      global DATA_Ready
+      global Receive_Flag
+      global  List_Flag
+      global Serial_Flag
+      global Serial_Flag2
+      global ERROR_NACK_COUNTER_Status
+      Status_Flag = 1
+
+
+      print('Enter Status Function')
+      data = 'ACK_status'
+      conn.send(data.encode())
+      print('ACK_status')
+    #      time.sleep(1)
+      ready = select.select([conn],[],[],5)
+      if ready[0]:
+         print('enter try status')
+         # receive the size of XML file
+         size_xml_new = conn.recv(6)
+         try:
+             size_new = int(size_xml_new)
+             print('size xml status')
+             print(size_new)
+             data = 'ACK'
+             conn.send(data.encode())
+             print('SENDED ACK_SIZE')
+             time.sleep(0.1)
+             ready = select.select([conn], [], [], 6)
+
+             if ready[0]:
+                print('dentro status')
+                data_received = conn.recv(size_new)
+                print(data_received)
+                print('New XML RECEIVED')
+        #            time.sleep(0.2)
+                f = open('Status.xml', 'w')
+                f.write(data_received.decode())  # write it to a file called tag_dat
+                f.close()
+                print('Write new XML')
+
+                prev = 0
+                for eachline in open('Status.xml', 'rb'):
+                    prev = zlib.crc32(eachline, prev)
+                print("CRC")
+                print((hex(prev)))
+
+                ready = select.select([conn], [], [], 5)
+                if ready[0]:
+                    data_received_crc = conn.recv(10)
+                    print(data_received_crc)
+
+                    if ((data_received_crc).decode() == str(hex(prev))):
+                        data = 'ACK'
+                        conn.send(data.encode())
+                        print('SENDED ACK Accepted')
+                        DATA_Ready = 'Deactivate'
+                        ERROR_NACK_COUNTER_Status=0
+                        Status_Flag = 0
+                    else:
+                        data = 'NACK'
+                        conn.send(data.encode())
+                        ERROR_NACK_COUNTER_Status = ERROR_NACK_COUNTER_Status + 1
+                        # CONFIGURATION ERROR 1
+                        if ERROR_NACK_COUNTER_Status == 3:
+                            f = open('error_log.txt', 'w')
+                            f.write("CONFIGURATION = ERROR 1")  # write it to a file called tag_data.xml
+                            f.close()
+                            os.system("sudo reboot")
+                else:
+                    ERROR_NACK_COUNTER_Status = ERROR_NACK_COUNTER_Status + 1
+                    # CONFIGURATION ERROR 1
+                    if ERROR_NACK_COUNTER_Status == 3:
+                        f = open('error_log.txt', 'w')
+                        f.write("CONFIGURATION = ERROR 1")  # write it to a file called tag_data.xml
+                        f.close()
+                        os.system("sudo reboot")
+             else:
+                ERROR_NACK_COUNTER_Status = ERROR_NACK_COUNTER_Status + 1
+                # CONFIGURATION ERROR 1
+                if ERROR_NACK_COUNTER_Status == 3:
+                    f = open('error_log.txt', 'w')
+                    f.write("CONFIGURATION = ERROR 1")  # write it to a file called tag_data.xml
+                    f.close()
+                    os.system("sudo reboot")
+
+         except:
+            data = 'NACK'
+            conn.send(data.encode())
+            ERROR_NACK_COUNTER_Status = ERROR_NACK_COUNTER_Status + 1
+            # CONFIGURATION ERROR 1
+            if ERROR_NACK_COUNTER_Status == 3:
+                f = open('error_log.txt', 'w')
+                f.write("CONFIGURATION = ERROR 1")  # write it to a file called tag_data.xml
+                f.close()
+                os.system("sudo reboot")
+            pass
+      else:
+          ERROR_NACK_COUNTER_Status = ERROR_NACK_COUNTER_Status + 1
+          # CONFIGURATION ERROR 1
+          if ERROR_NACK_COUNTER_Status == 3:
+              f = open('error_log.txt', 'w')
+              f.write("CONFIGURATION = ERROR 1")  # write it to a file called tag_data.xml
+              f.close()
+              os.system("sudo reboot")
+
+      if (Status_Flag == 1):
+
+          Status_Flag = 0
+
+      DATA_Ready = 'Deactivate'
+      Serial_Flag2 = 0
+
+      return
+
+
 # ****************************************************
 # ******************** Generate the list *************
 # ****************************************************
@@ -1112,8 +1323,8 @@ def Serial():
        tree = etree.parse('machine.xml')
        root = tree.getroot()
        print('machine.xml.parse')
-       tree2 = etree.parse('Status.xml')
-       root2 = tree2.getroot()
+       tree_status_xml = etree.parse('Status.xml')
+       root_status_xml = tree_status_xml.getroot()
        print('Status.xml.parse')
 
        print('Test Serial')
@@ -1268,8 +1479,12 @@ def Serial():
 
                                       if not(root[itr][2].text == 'Zero production'):
                                         root[itr][8].text = str(Production_num)
+                                    #load status name in machine xml
+                                      for Status_itr in range(len(root_status_xml)):
+                                          if(root_status_xml[Status_itr][1] == str(Status_num)):
+                                              root[itr][2].text = root_status_xml[Status_itr][0].text
 
-                                      root[itr][2].text = root2[Status_num][0].text
+
                                       root[itr][10].text = str(Operator_num)
 
                                       tree.write('machine.xml')
